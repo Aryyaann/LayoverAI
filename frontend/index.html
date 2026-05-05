@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LayoverAI</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9992;</text></svg>"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #080c14;
+      --surface: #0d1520;
+      --surface2: #111d2e;
+      --border: #1a2d45;
+      --accent: #00c8ff;
+      --accent2: #0077ff;
+      --warn: #ff6b35;
+      --ok: #00e5a0;
+      --text: #cdd9e8;
+      --muted: #4a6580;
+      --mono: 'DM Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── FLIGHT PATH SVG BACKGROUND ── */
+    #flight-path-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.15;
+    }
+
+    /* ── LAYOUT ── */
+    .app {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,12,20,0.9);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-plane {
+      width: 32px;
+      height: 32px;
+      animation: planeBob 3s ease-in-out infinite;
+    }
+
+    @keyframes planeBob {
+      0%, 100% { transform: translateY(0) rotate(-10deg); }
+      50% { transform: translateY(-6px) rotate(-10deg); }
+    }
+
+    .logo-text {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .logo-text span { color: var(--accent); }
+
+    .header-tag {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── LEFT PANEL (FORM) ── */
+    .panel-form {
+      grid-column: 1;
+      border-right: 1px solid var(--border);
+      padding: 2rem;
+      overflow-y: auto;
+      background: var(--surface);
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    /* ── FIELDS ── */
+    .field {
+      margin-bottom: 1.25rem;
+      position: relative;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .field-wrap {
+      position: relative;
+    }
+
+    .field-wrap input {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.9rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .field-wrap input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,200,255,0.08);
+    }
+
+    .field-wrap input::placeholder { color: var(--muted); }
+
+    /* ── DROPDOWN LIST ── */
+    .dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+      display: none;
+    }
+
+    .dropdown.open { display: block; animation: dropIn 0.15s ease; }
+
+    @keyframes dropIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .dropdown::-webkit-scrollbar { width: 4px; }
+    .dropdown::-webkit-scrollbar-track { background: transparent; }
+    .dropdown::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .dropdown-item {
+      padding: 0.65rem 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid rgba(26,45,69,0.5);
+      transition: background 0.1s;
+      font-size: 0.88rem;
+    }
+
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover, .dropdown-item.highlighted { background: rgba(0,200,255,0.08); }
+
+    .dropdown-item .item-code {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      min-width: 40px;
+    }
+
+    .dropdown-item .item-name { color: var(--text); }
+    .dropdown-item .item-country { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+
+    /* Terminal rows */
+    .terminals-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    /* Layover slider */
+    .layover-display {
+      font-family: var(--mono);
+      font-size: 1.8rem;
+      font-weight: 500;
+      color: var(--accent);
+      text-align: center;
+      margin: 0.5rem 0;
+    }
+
+    .layover-display span { font-size: 0.9rem; color: var(--muted); }
+
+    input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0,200,255,0.5);
+    }
+
+    .layover-labels {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
+    }
+
+    /* ── SUBMIT BUTTON ── */
+    .btn-generate {
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-generate:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,120,255,0.35);
+    }
+
+    .btn-generate:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-generate .btn-plane {
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.3s;
+    }
+
+    .btn-generate:hover .btn-plane { transform: translateX(4px) rotate(-5deg); }
+
+    /* ── RIGHT PANEL ── */
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── RESULT AREA ── */
+    .result-area {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+
+    .result-empty {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      color: var(--muted);
+    }
+
+    .result-empty svg { opacity: 0.15; }
+
+    .result-empty p {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── FLYING PLANE ANIMATION (loading) ── */
+    .loading-state {
+      display: none;
+      height: 100%;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+    }
+
+    .loading-state.active { display: flex; }
+
+    .runway {
+      width: 320px;
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      position: relative;
+      overflow: visible;
+    }
+
+    .runway-plane {
+      position: absolute;
+      top: -12px;
+      left: -20px;
+      animation: taxiRun 2s ease-in-out infinite;
+    }
+
+    @keyframes taxiRun {
+      0%   { left: -20px; opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { left: 320px; opacity: 0; }
+    }
+
+    .loading-text {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+
+    /* ── RESULT CARD ── */
+    .result-card {
+      display: none;
+      animation: fadeUp 0.4s ease;
+    }
+
+    .result-card.active { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .btn-download {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.04em;
+    }
+
+    .btn-download:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── MARKDOWN RENDER ── */
+    .plan-content h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin: 1.5rem 0 0.6rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .plan-content h2:first-child { margin-top: 0; }
+
+    .plan-content h3 {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin: 1rem 0 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .plan-content p {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .plan-content ul, .plan-content ol {
+      padding-left: 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .plan-content li {
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+
+    .plan-content strong { color: #fff; font-weight: 600; }
+
+    .plan-content .warn-block {
+      background: rgba(255,107,53,0.08);
+      border-left: 3px solid var(--warn);
+      padding: 0.75rem 1rem;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 1rem;
+      font-size: 0.88rem;
+      color: var(--warn);
+      font-weight: 600;
+    }
+
+    .plan-content .ok-block {
+      background: rgba(0,229,160,0.06);
+      border-left: 3px solid var(--ok);
+      padding: 0.75rem 1rem;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 1rem;
+      font-size: 0.88rem;
+      color: var(--ok);
+    }
+
+    /* ── CONSOLE ── */
+    .console-area {
+      border-top: 1px solid var(--border);
+      height: 220px;
+      display: flex;
+      flex-direction: column;
+      background: #060a10;
+    }
+
+    .console-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .console-tab {
+      padding: 0.5rem 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      text-transform: uppercase;
+    }
+
+    .console-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .console-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.75rem 1rem;
+    }
+
+    .console-body::-webkit-scrollbar { width: 4px; }
+    .console-body::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .log-line {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 0.3rem;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      line-height: 1.5;
+      animation: logFade 0.2s ease;
+    }
+
+    @keyframes logFade {
+      from { opacity: 0; transform: translateX(-4px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .log-time { color: var(--muted); min-width: 56px; }
+    .log-level { min-width: 48px; font-weight: 500; }
+    .log-level.info  { color: var(--accent); }
+    .log-level.ok    { color: var(--ok); }
+    .log-level.warn  { color: var(--warn); }
+    .log-level.sys   { color: #888; }
+    .log-msg { color: var(--text); }
+
+    /* ── SCROLLBARS GLOBAL ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .panel-form { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Background flight path SVG -->
+<svg id="flight-path-bg" viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice">
+  <path d="M 0 700 Q 350 400 700 450 Q 1050 500 1400 200" stroke="#00c8ff" stroke-width="1" fill="none" stroke-dasharray="6 10"/>
+  <path d="M 0 200 Q 400 350 800 300 Q 1100 260 1400 600" stroke="#0077ff" stroke-width="0.8" fill="none" stroke-dasharray="4 14"/>
+</svg>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <svg class="logo-plane" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 24L20 16L38 8L32 22L42 26L32 30L38 40L20 32L6 24Z" fill="#00c8ff" opacity="0.9"/>
+        <path d="M6 24L20 16L38 8" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <div class="logo-text">Layover<span>AI</span></div>
+    </div>
+    <div class="header-tag">SMART TRANSIT PLANNER v1.0</div>
+  </header>
+
+  <!-- FORM PANEL -->
+  <div class="panel-form">
+    <div class="section-label">Flight Details</div>
+
+    <!-- Airport -->
+    <div class="field" id="field-airport">
+      <label>Airport</label>
+      <div class="field-wrap">
+        <input type="text" id="input-airport" placeholder="Search airport..." autocomplete="off" readonly/>
+        <div class="dropdown" id="dd-airport"></div>
+      </div>
+    </div>
+
+    <!-- ICAO auto-filled -->
+    <div class="field">
+      <label>ICAO Code</label>
+      <div class="field-wrap">
+        <input type="text" id="input-icao" placeholder="Auto-filled" readonly style="opacity:0.6; cursor:default;"/>
+      </div>
+    </div>
+
+    <!-- Terminals -->
+    <div class="terminals-grid">
+      <div class="field">
+        <label>Arrival Terminal</label>
+        <div class="field-wrap">
+          <input type="text" id="input-arrival" placeholder="Select terminal" autocomplete="off" readonly/>
+          <div class="dropdown" id="dd-arrival"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Departure Terminal</label>
+        <div class="field-wrap">
+          <input type="text" id="input-departure" placeholder="Select terminal" autocomplete="off" readonly/>
+          <div class="dropdown" id="dd-departure"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layover slider -->
+    <div class="field">
+      <label>Layover Duration</label>
+      <div class="layover-display" id="layover-display">90 <span>min</span></div>
+      <input type="range" id="input-layover" min="20" max="480" value="90" step="5"/>
+      <div class="layover-labels"><span>20 min</span><span>2 h</span><span>4 h</span><span>8 h</span></div>
+    </div>
+
+    <button class="btn-generate" id="btn-generate" disabled>
+      <span class="btn-plane">
+        <svg width="16" height="16" viewBox="0 0 48 48" fill="none" style="vertical-align:middle">
+          <path d="M6 24L20 16L38 8L32 22L42 26L32 30L38 40L20 32L6 24Z" fill="white"/>
+        </svg>
+      </span>
+      Generate Layover Plan
+    </button>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right">
+    <div class="result-area">
+
+      <!-- Empty state -->
+      <div class="result-empty" id="state-empty">
+        <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+          <circle cx="40" cy="40" r="38" stroke="#1a2d45" stroke-width="2"/>
+          <path d="M15 40L28 33L50 24L44 37L56 41L44 45L50 56L28 47L15 40Z" fill="#1a2d45"/>
+        </svg>
+        <p>SELECT AN AIRPORT TO BEGIN</p>
+      </div>
+
+      <!-- Loading state -->
+      <div class="loading-state" id="state-loading">
+        <div>
+          <div class="runway">
+            <svg class="runway-plane" width="24" height="24" viewBox="0 0 48 48" fill="none">
+              <path d="M6 24L20 16L38 8L32 22L42 26L32 30L38 40L20 32L6 24Z" fill="#00c8ff"/>
+            </svg>
+          </div>
+        </div>
+        <div class="loading-text" id="loading-text">ANALYZING LAYOVER...</div>
+      </div>
+
+      <!-- Result -->
+      <div class="result-card" id="state-result">
+        <div class="result-header">
+          <div class="result-title" id="result-title">Layover Plan</div>
+          <button class="btn-download" id="btn-download">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download Report
+          </button>
+        </div>
+        <div class="plan-content" id="plan-content"></div>
+      </div>
+    </div>
+
+    <!-- CONSOLE -->
+    <div class="console-area">
+      <div class="console-tabs">
+        <div class="console-tab active" data-tab="user" onclick="switchTab('user')">Passenger View</div>
+        <div class="console-tab" data-tab="dev" onclick="switchTab('dev')">Developer Log</div>
+      </div>
+      <div class="console-body" id="console-body"></div>
+    </div>
+  </div>
+
+</div>
+<script>
+// ── AIRPORT DATA ──
+const AIRPORTS = [
+  { code: "JFK", icao: "KJFK", name: "John F. Kennedy International", city: "New York", country: "USA",
+    terminals: ["Terminal 1","Terminal 2","Terminal 4","Terminal 5","Terminal 7","Terminal 8"] },
+  { code: "LAX", icao: "KLAX", name: "Los Angeles International", city: "Los Angeles", country: "USA",
+    terminals: ["Terminal 1","Terminal 2","Terminal 3","Terminal 4","Terminal 5","Terminal 6","Terminal 7","Tom Bradley Intl (TBIT)"] },
+  { code: "MIA", icao: "KMIA", name: "Miami International", city: "Miami", country: "USA",
+    terminals: ["North Terminal (D)","Central Terminal (E/F)","South Terminal (G/H/J)"] },
+  { code: "ORD", icao: "KORD", name: "O'Hare International", city: "Chicago", country: "USA",
+    terminals: ["Terminal 1","Terminal 2","Terminal 3","Terminal 5 (Intl)"] },
+  { code: "ATL", icao: "KATL", name: "Hartsfield-Jackson Atlanta Intl", city: "Atlanta", country: "USA",
+    terminals: ["Domestic Terminal","International Terminal"] },
+  { code: "DFW", icao: "KDFW", name: "Dallas/Fort Worth International", city: "Dallas", country: "USA",
+    terminals: ["Terminal A","Terminal B","Terminal C","Terminal D","Terminal E"] },
+  { code: "LHR", icao: "EGLL", name: "London Heathrow", city: "London", country: "UK",
+    terminals: ["Terminal 2","Terminal 3","Terminal 4","Terminal 5"] },
+  { code: "CDG", icao: "LFPG", name: "Charles de Gaulle", city: "Paris", country: "France",
+    terminals: ["Terminal 1","Terminal 2A","Terminal 2B","Terminal 2C","Terminal 2D","Terminal 2E","Terminal 2F","Terminal 3"] },
+  { code: "AMS", icao: "EHAM", name: "Amsterdam Schiphol", city: "Amsterdam", country: "Netherlands",
+    terminals: ["Departure Hall 1","Departure Hall 2","Departure Hall 3"] },
+  { code: "FRA", icao: "EDDF", name: "Frankfurt am Main", city: "Frankfurt", country: "Germany",
+    terminals: ["Terminal 1 (A/B/C)","Terminal 2 (D/E)","Terminal 3"] },
+  { code: "DXB", icao: "OMDB", name: "Dubai International", city: "Dubai", country: "UAE",
+    terminals: ["Terminal 1","Terminal 2","Terminal 3"] },
+  { code: "SIN", icao: "WSSS", name: "Singapore Changi", city: "Singapore", country: "Singapore",
+    terminals: ["Terminal 1","Terminal 2","Terminal 3","Terminal 4"] },
+  { code: "HKG", icao: "VHHH", name: "Hong Kong International", city: "Hong Kong", country: "China",
+    terminals: ["Terminal 1","Terminal 2"] },
+  { code: "MAD", icao: "LEMD", name: "Adolfo Suarez Madrid-Barajas", city: "Madrid", country: "Spain",
+    terminals: ["Terminal 1","Terminal 2","Terminal 3","Terminal 4","Terminal 4S"] },
+  { code: "BCN", icao: "LEBL", name: "Barcelona El Prat", city: "Barcelona", country: "Spain",
+    terminals: ["Terminal 1","Terminal 2A","Terminal 2B","Terminal 2C"] },
+];
+
+// ── STATE ──
+let selectedAirport = null;
+let currentTab = 'user';
+let lastPlan = '';
+let lastMeta = {};
+
+// ── LOG SYSTEM ──
+const logs = { user: [], dev: [] };
+
+function log(msg, level = 'info', target = 'both') {
+  const now = new Date();
+  const time = now.toTimeString().slice(0,8);
+  const entry = { time, level, msg };
+  if (target === 'both' || target === 'dev') logs.dev.push(entry);
+  if (target === 'both' || target === 'user') logs.user.push({ ...entry });
+  renderConsole();
+}
+
+function renderConsole() {
+  const body = document.getElementById('console-body');
+  const entries = logs[currentTab];
+  body.innerHTML = entries.map(e => `
+    <div class="log-line">
+      <span class="log-time">${e.time}</span>
+      <span class="log-level ${e.level}">${e.level.toUpperCase()}</span>
+      <span class="log-msg">${e.msg}</span>
+    </div>
+  `).join('');
+  body.scrollTop = body.scrollHeight;
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.console-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  renderConsole();
+}
+
+// ── DROPDOWN ──
+function buildAirportDropdown(filter = '') {
+  const dd = document.getElementById('dd-airport');
+  const filtered = AIRPORTS.filter(a =>
+    a.code.toLowerCase().includes(filter.toLowerCase()) ||
+    a.name.toLowerCase().includes(filter.toLowerCase()) ||
+    a.city.toLowerCase().includes(filter.toLowerCase())
+  );
+  dd.innerHTML = filtered.map(a => `
+    <div class="dropdown-item" onclick="selectAirport('${a.code}')">
+      <span class="item-code">${a.code}</span>
+      <span class="item-name">${a.name}</span>
+      <span class="item-country">${a.country}</span>
+    </div>
+  `).join('') || '<div class="dropdown-item"><span class="item-name" style="color:var(--muted)">No results</span></div>';
+  dd.classList.add('open');
+}
+
+function selectAirport(code) {
+  const airport = AIRPORTS.find(a => a.code === code);
+  if (!airport) return;
+  selectedAirport = airport;
+
+  document.getElementById('input-airport').value = `${airport.code} — ${airport.name}`;
+  document.getElementById('input-icao').value = airport.icao;
+  document.getElementById('dd-airport').classList.remove('open');
+
+  // Reset terminals
+  document.getElementById('input-arrival').value = '';
+  document.getElementById('input-departure').value = '';
+  buildTerminalDropdowns(airport);
+
+  checkFormValid();
+  log(`Airport selected: ${airport.code} (${airport.name})`, 'info', 'dev');
+  log(`Selected ${airport.name} in ${airport.city}. ${airport.terminals.length} terminals available.`, 'info', 'user');
+}
+
+function buildTerminalDropdowns(airport) {
+  ['arrival','departure'].forEach(type => {
+    const dd = document.getElementById(`dd-${type}`);
+    dd.innerHTML = airport.terminals.map(t => `
+      <div class="dropdown-item" onclick="selectTerminal('${type}','${t}')">
+        <span class="item-name">${t}</span>
+      </div>
+    `).join('');
+  });
+}
+
+function selectTerminal(type, terminal) {
+  document.getElementById(`input-${type}`).value = terminal;
+  document.getElementById(`dd-${type}`).classList.remove('open');
+  checkFormValid();
+  log(`${type === 'arrival' ? 'Arrival' : 'Departure'} terminal set: ${terminal}`, 'info', 'dev');
+}
+
+// ── TOGGLE DROPDOWNS ──
+document.getElementById('input-airport').addEventListener('click', () => {
+  if (!document.getElementById('dd-airport').classList.contains('open')) {
+    buildAirportDropdown();
+  } else {
+    document.getElementById('dd-airport').classList.remove('open');
+  }
+});
+
+['arrival','departure'].forEach(type => {
+  document.getElementById(`input-${type}`).addEventListener('click', () => {
+    if (!selectedAirport) {
+      log('Please select an airport first.', 'warn', 'user');
+      return;
+    }
+    const dd = document.getElementById(`dd-${type}`);
+    const isOpen = dd.classList.contains('open');
+    closeAllDropdowns();
+    if (!isOpen) dd.classList.add('open');
+  });
+});
+
+function closeAllDropdowns() {
+  document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.field-wrap')) closeAllDropdowns();
+});
+
+// ── LAYOVER SLIDER ──
+const slider = document.getElementById('input-layover');
+const display = document.getElementById('layover-display');
+slider.addEventListener('input', () => {
+  const v = parseInt(slider.value);
+  const h = Math.floor(v / 60);
+  const m = v % 60;
+  display.innerHTML = h > 0
+    ? `${h}<span>h</span> ${m > 0 ? m + '<span>min</span>' : ''}`
+    : `${v} <span>min</span>`;
+});
+
+// ── FORM VALIDATION ──
+function checkFormValid() {
+  const valid = selectedAirport &&
+    document.getElementById('input-arrival').value &&
+    document.getElementById('input-departure').value;
+  document.getElementById('btn-generate').disabled = !valid;
+}
+
+// ── STATES ──
+function showState(id) {
+  ['state-empty','state-loading','state-result'].forEach(s => {
+    const el = document.getElementById(s);
+    if (s === 'state-loading') el.classList.toggle('active', s === id);
+    else el.style.display = s === id ? 'block' : 'none';
+  });
+  if (id === 'state-empty') document.getElementById('state-empty').style.display = 'flex';
+}
+
+// ── MARKDOWN RENDERER ──
+function renderMarkdown(text) {
+  let html = text
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+    .replace(/(<li>[\s\S]+?<\/li>)/g, '<ul>$1</ul>')
+    .replace(/<\/ul>\s*<ul>/g, '')
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/^(?!<[hul])/gm, '');
+
+  // Highlight warning blocks
+  html = html.replace(/(<strong>.*?WARNING.*?<\/strong>.*?)(<\/p>|$)/gi,
+    '<div class="warn-block">$1</div>');
+  html = html.replace(/(TIGHT CONNECTION.*?)(<\/h2>)/gi,
+    '<div class="warn-block">$1</div>$2');
+
+  return `<p>${html}</p>`;
+}
+
+// ── GENERATE ──
+document.getElementById('btn-generate').addEventListener('click', async () => {
+  const airport = selectedAirport;
+  const arrival = document.getElementById('input-arrival').value;
+  const departure = document.getElementById('input-departure').value;
+  const layover = parseInt(slider.value);
+
+  lastMeta = { airport: airport.code, arrival, departure, layover };
+
+  showState('state-loading');
+  document.getElementById('btn-generate').disabled = true;
+
+  // Simulate loading steps with messages
+  const steps = [
+    { msg: 'Querying ChromaDB for airport procedures...', dmsg: `RAG query: ${airport.code} terminal transfer procedures`, delay: 0 },
+    { msg: `Fetching live weather data for ${airport.icao}...`, dmsg: `GET https://aviationweather.gov/api/data/metar?ids=${airport.icao}`, delay: 800 },
+    { msg: 'Sending request to GPT-4o with function calling...', dmsg: `POST /v1/chat/completions model=gpt-4o tools=[get_airport_info]`, delay: 1600 },
+    { msg: 'GPT-4o processing your layover details...', dmsg: 'Waiting for completion stream...', delay: 2400 },
+  ];
+
+  steps.forEach(s => {
+    setTimeout(() => {
+      document.getElementById('loading-text').textContent = s.msg.toUpperCase();
+      log(s.msg, 'info', 'user');
+      log(s.dmsg, 'sys', 'dev');
+    }, s.delay);
+  });
+
+  try {
+    const res = await fetch('/api/layover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        airport: airport.code,
+        arrival_terminal: arrival,
+        departure_terminal: departure,
+        layover_minutes: layover,
+        icao_code: airport.icao
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Server error');
+    }
+
+    const data = await res.json();
+    lastPlan = data.plan;
+
+    document.getElementById('result-title').textContent =
+      `${airport.code} | ${arrival} → ${departure} | ${layover} min`;
+    document.getElementById('plan-content').innerHTML = renderMarkdown(data.plan);
+
+    showState('state-result');
+    log('Layover plan generated successfully.', 'ok', 'user');
+    log(`Response received. ${data.plan.length} chars. Rendering...`, 'ok', 'dev');
+
+  } catch (err) {
+    showState('state-empty');
+    log(`Error: ${err.message}`, 'warn', 'user');
+    log(`ERROR: ${err.message}`, 'warn', 'dev');
+  } finally {
+    document.getElementById('btn-generate').disabled = false;
+  }
+});
+
+// ── PDF DOWNLOAD ──
+document.getElementById('btn-download').addEventListener('click', async () => {
+  log('Generating PDF report on server...', 'info', 'user');
+  log('POST /api/report — reportlab PDF generation', 'sys', 'dev');
+
+  try {
+    const res = await fetch('/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        airport: lastMeta.airport,
+        arrival_terminal: lastMeta.arrival,
+        departure_terminal: lastMeta.departure,
+        layover_minutes: lastMeta.layover,
+        plan: lastPlan
+      })
+    });
+
+    if (!res.ok) throw new Error('PDF generation failed');
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `layover-${lastMeta.airport}-plan.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    log('PDF downloaded successfully.', 'ok', 'user');
+    log('PDF streamed and downloaded.', 'ok', 'dev');
+
+  } catch (err) {
+    log(`PDF error: ${err.message}`, 'warn', 'user');
+  }
+
+  // Footer
+  doc.setFontSize(7);
+  doc.setTextColor(160, 160, 180);
+  doc.text(`Generated by LayoverAI — ${new Date().toLocaleDateString()}`, margin, 290);
+
+  doc.save(`layover-plan-${lastMeta.airport}-${Date.now()}.pdf`);
+  log('PDF report downloaded.', 'ok', 'user');
+  log(`jsPDF: saved layover-plan-${lastMeta.airport}.pdf`, 'ok', 'dev');
+});
+
+// ── INIT ──
+showState('state-empty');
+log('LayoverAI initialized. Select an airport to begin.', 'info', 'user');
+log('System ready. ChromaDB vectorstore pending startup.', 'sys', 'dev');
+</script>
+</body>
+</html>
