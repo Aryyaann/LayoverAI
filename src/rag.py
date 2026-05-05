@@ -3,7 +3,7 @@ import pathlib
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 
 BASE_DIR = pathlib.Path(__file__).parent.parent
 CHROMA_DIR = str(BASE_DIR / "chroma_db")
@@ -44,6 +44,7 @@ def load_and_index_documents():
         embedding=embeddings,
         persist_directory=CHROMA_DIR
     )
+    vectorstore.persist()
 
     print(f"Indexed {len(chunks)} chunks into ChromaDB.")
     return vectorstore
