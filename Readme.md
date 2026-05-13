@@ -199,10 +199,15 @@ LangChain changed the import path for `RecursiveCharacterTextSplitter` in recent
 2. **Airport coverage expansion** — the current version supports 4 airports. Expanding the PDF document base and the frontend airport list to cover the top 100 global hubs would significantly increase the practical utility of the application.
 
 ---
+## AI
+
+**AI assistance**
+Claude (Anthropic) was used to assist in building the frontend interface
+and debugging the backend. All code was reviewed, tested and understood
+before inclusion in the project.
 
 ## Author
 
 Aryan Haresh Narwani Daswani
 Machine Learning 2 — U-tad
 
-Professor: Hugo — [@hugochapadoo](https://github.com/hugochapadoo)
